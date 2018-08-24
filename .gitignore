@@ -1,0 +1,13 @@
+# executable
+bin
+.exe
+
+# build
+build
+data
+
+# editor
+.vscode
+
+# temp
+tmp
