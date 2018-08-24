@@ -3,7 +3,6 @@
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 namespace OneStroke {
@@ -12,7 +11,6 @@ using std::cout;
 using std::endl;
 using std::string;
 using std::to_string;
-using std::unordered_set;
 using std::vector;
 
 int rand(int beg, int end) {
@@ -31,24 +29,16 @@ string getTime() {
 
 class Map {
  public:
-  /**
-   * ******************************************
-   *         Easy    Normal    Hard    Master
-   * width   4       6         6       6
-   * height  5       5         6       7
-   * blank   4       4         4       4
-   * ******************************************
-   */
-  Map(int width, int height, int blank, int number)
-      : width_(width),
-        height_(height),
-        blank_(blank),
-        map_(height, vector<bool>(width, true)),
-        steps_(width * height - blank),
-        used_(height, vector<bool>(width, false)),
+  Map(string dif, int number)
+      : dif_(dif),
+        used_(dif_.height, vector<bool>(dif_.width, false)),
+        time_(getTime()),
         number_(number),
         stop_signal_(false) {
-    cout << "Building map " << 1 << "..." << endl;
+    char current_dir[40];
+    getcwd(current_dir, 40);
+    sprintf(path_, "%s\\data\\%s", current_dir, time_.c_str());
+    _mkdir(path_);
     build();
   }
 
@@ -57,113 +47,146 @@ class Map {
     int y;
   };
 
- private:
-  int width_;
-  int height_;
-  int blank_;
-  vector<vector<bool>> map_;
-  Point start_point_;
-  int steps_;
-  vector<vector<bool>> used_;
-  int number_;
-  bool stop_signal_;
+  /**
+   * ******************************************
+   *         Easy    Normal    Hard    Master
+   * width   4       6         6       6
+   * height  5       5         6       7
+   * blank   4       4         4       4
+   * ******************************************
+   */
+  struct Difficulty {
+    Difficulty(string dif) : dif(dif) {
+      height = dif == "Easy" || dif == "Normal" ? 5 : dif == "Hard" ? 6 : 7;
+      width = dif == "Easy" ? 4 : 6;
+      blank = 4;
+      step = height * width - blank;
+    }
+    string dif;
+    int height;
+    int width;
+    int blank;
+    int step;
+  };
 
  private:
-  void exportMap() {
-    static int count = 0;
-    char path[50];
-    char dir[40];
-    getcwd(dir, 40);
-    sprintf(path, "%s\\data\\%s\\maps_%d.csv", dir, getTime(), ++count);
-    std::ofstream file(path, std::ios::out);
-    int x = start_point_.x;
-    int y = start_point_.y;
-    file << "map " << count << ":\n";
-    for (int i = 0; i < height_; ++i) {
-      for (int j = 0; j < width_; ++j) {
-        file << (map_[i][j] ? i == x && j == y ? 2 : 1 : 0);
-        if (j < width_ - 1) file << ',';
-      }
-      file << '\n';
-    }
-    file.close();
-    if (count >= number_) {
-      stop_signal_ = true;
-      return;
-    }
-    cout << "Building map " << count << "..." << endl;
+  Difficulty dif_;
+  vector<vector<bool>> used_;
+  string time_;
+  int number_;
+  bool stop_signal_;
+  char path_[50];
+  Point start_point_;
+  Point end_point_;
+
+ private:
+  void build() {
+    cout << "Building map " << 1 << "..." << endl;
+    int width = dif_.width;
+    int height = dif_.height;
+    start_point_.x = 0;
+    start_point_.y = rand(1, width - 2);
+    used_[start_point_.x][start_point_.y] = true;
+    nextStep(1, start_point_);
+    used_[start_point_.x][start_point_.y] = false;
+
+    start_point_.x = rand(1, height - 2);
+    start_point_.y = width - 1;
+    used_[start_point_.x][start_point_.y] = true;
+    nextStep(1, start_point_);
+    used_[start_point_.x][start_point_.y] = false;
+
+    start_point_.x = height - 1;
+    start_point_.y = rand(1, width - 2);
+    used_[start_point_.x][start_point_.y] = true;
+    nextStep(1, start_point_);
+    used_[start_point_.x][start_point_.y] = false;
+
+    start_point_.x = rand(1, height - 2);
+    start_point_.y = 0;
+    used_[start_point_.x][start_point_.y] = true;
+    nextStep(1, start_point_);
+    used_[start_point_.x][start_point_.y] = false;
+
+    cout << "Done." << endl;
   }
 
   void nextStep(int step, const Point& point) {
     if (stop_signal_) return;
-    if (step == steps_) {
+    if (step == dif_.step) {
+      end_point_ = point;
       exportMap();
       return;
     }
     int x = point.x;
     int y = point.y;
-    if (x > 0 && !used_[x - 1][y] && map_[x - 1][y]) {
+    if (x > 0 && !used_[x - 1][y]) {
       Point nextPoint = {x - 1, y};
-      used_[x - 1][y] = true;
-      nextStep(step + 1, nextPoint);
-      used_[x - 1][y] = false;
+      if (dis(nextPoint, start_point_) > 1 || step == 1) {
+        used_[x - 1][y] = true;
+        nextStep(step + 1, nextPoint);
+        used_[x - 1][y] = false;
+      }
     }
-    if (y > 0 && !used_[x][y - 1] && map_[x][y - 1]) {
+    if (y > 0 && !used_[x][y - 1]) {
       Point nextPoint{x, y - 1};
-      used_[x][y - 1] = true;
-      nextStep(step + 1, nextPoint);
-      used_[x][y - 1] = false;
+      if (dis(nextPoint, start_point_) > 1 || step == 1) {
+        used_[x][y - 1] = true;
+        nextStep(step + 1, nextPoint);
+        used_[x][y - 1] = false;
+      }
     }
-    if (x < height_ - 1 && !used_[x + 1][y] && map_[x + 1][y]) {
+    if (x < dif_.height - 1 && !used_[x + 1][y]) {
       Point nextPoint{x + 1, y};
-      used_[x + 1][y] = true;
-      nextStep(step + 1, nextPoint);
-      used_[x + 1][y] = false;
+      if (dis(nextPoint, start_point_) > 1 || step == 1) {
+        used_[x + 1][y] = true;
+        nextStep(step + 1, nextPoint);
+        used_[x + 1][y] = false;
+      }
     }
-    if (y < width_ - 1 && !used_[x][y - 1] && map_[x][y - 1]) {
+    if (y < dif_.width - 1 && !used_[x][y + 1]) {
       Point nextPoint{x, y + 1};
-      used_[x][y + 1] = true;
-      nextStep(step + 1, nextPoint);
-      used_[x][y + 1] = false;
+      if (dis(nextPoint, start_point_) > 1 || step == 1) {
+        used_[x][y + 1] = true;
+        nextStep(step + 1, nextPoint);
+        used_[x][y + 1] = false;
+      }
     }
   }
 
-  void build() {
-    start_point_.x = 0;
-    start_point_.y = rand(0, width_ - 1);
-    nextStep(1, start_point_);
+  int dis(const Point& p1, const Point& p2) {
+    return abs(p1.x - p2.x) + abs(p1.y - p2.y);
+  }
 
-    start_point_.x = rand(0, height_ - 1);
-    start_point_.y = width_ - 1;
-    nextStep(1, start_point_);
-
-    start_point_.x = height_ - 1;
-    start_point_.y = rand(0, width_ - 1);
-    nextStep(1, start_point_);
-
-    start_point_.x = rand(0, height_ - 1);
-    start_point_.y = 0;
-    nextStep(1, start_point_);
+  void exportMap() {
+    static int count = 0;
+    char path[50];
+    sprintf(path, "%s\\%s_%d.csv", path_, dif_.dif.c_str(), ++count);
+    std::ofstream file(path, std::ios::out);
+    int x = end_point_.x;
+    int y = end_point_.y;
+    file << "map " << count << ":\n";
+    for (int i = 0; i < dif_.height; ++i) {
+      for (int j = 0; j < dif_.width; ++j) {
+        file << (used_[i][j] ? i == x && j == y ? 8 : 1 : 0);
+        if (j < dif_.width - 1) file << ',';
+      }
+      file << '\n';
+    }
+    file.close();
+    if (count > number_) {
+      stop_signal_ = true;
+      return;
+    }
+    cout << "Building map " << count << "..." << endl;
   }
 };
 
 }  // namespace OneStroke
 
-/**
- * Need two arguments for generating maps
- * 1. difficulty: "Easy", "Normal", "Hard", "Master"
- * 2. number: the amount of maps to generate
- *
- */
 int main() {
-  std::string difficulty;
-  std::cin >> difficulty;
-  int width = difficulty == "Easy" ? 4 : 6;
-  int height = difficulty == "Easy" || difficulty == "Normal"
-                   ? 5
-                   : difficulty == "Hard" ? 6 : 7;
-  int blank = 4;
   int number;
-  std::cin >> number;
-  OneStroke::Map map(width, height, blank, number);
+  std::string difficulty;
+  std::cin >> difficulty >> number;
+  OneStroke::Map map(difficulty, number);
 }
