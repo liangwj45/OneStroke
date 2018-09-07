@@ -84,32 +84,45 @@ class Map {
     cout << "Building map " << 1 << "..." << endl;
     int width = dif_.width;
     int height = dif_.height;
+    stop_signal_ = false;
 
-    do {
-      start_point_.x = 0;
-      start_point_.y = rand(0, width - 1);
-      used_[start_point_.x][start_point_.y] = true;
-      nextStep(1, start_point_);
-      used_[start_point_.x][start_point_.y] = false;
+    for (int x = 0; x < width; ++x) {
+      for (int y = 0; y < height; ++y) {
+        start_point_.x = x;
+        start_point_.y = y;
+        used_[start_point_.x][start_point_.y] = true;
+        nextStep(1, start_point_);
+        used_[start_point_.x][start_point_.y] = false;
+        if (stop_signal_) break;
+      }
+      if (stop_signal_) break;
+    }
 
-      start_point_.x = rand(0, height - 1);
-      start_point_.y = width - 1;
-      used_[start_point_.x][start_point_.y] = true;
-      nextStep(1, start_point_);
-      used_[start_point_.x][start_point_.y] = false;
+    // do {
+    //   start_point_.x = 0;
+    //   start_point_.y = rand(0, width - 1);
+    //   used_[start_point_.x][start_point_.y] = true;
+    //   nextStep(1, start_point_);
+    //   used_[start_point_.x][start_point_.y] = false;
 
-      start_point_.x = height - 1;
-      start_point_.y = rand(0, width - 1);
-      used_[start_point_.x][start_point_.y] = true;
-      nextStep(1, start_point_);
-      used_[start_point_.x][start_point_.y] = false;
+    //   start_point_.x = rand(0, height - 1);
+    //   start_point_.y = width - 1;
+    //   used_[start_point_.x][start_point_.y] = true;
+    //   nextStep(1, start_point_);
+    //   used_[start_point_.x][start_point_.y] = false;
 
-      start_point_.x = rand(0, height - 1);
-      start_point_.y = 0;
-      used_[start_point_.x][start_point_.y] = true;
-      nextStep(1, start_point_);
-      used_[start_point_.x][start_point_.y] = false;
-    } while (!stop_signal_);
+    //   start_point_.x = height - 1;
+    //   start_point_.y = rand(0, width - 1);
+    //   used_[start_point_.x][start_point_.y] = true;
+    //   nextStep(1, start_point_);
+    //   used_[start_point_.x][start_point_.y] = false;
+
+    //   start_point_.x = rand(0, height - 1);
+    //   start_point_.y = 0;
+    //   used_[start_point_.x][start_point_.y] = true;
+    //   nextStep(1, start_point_);
+    //   used_[start_point_.x][start_point_.y] = false;
+    // } while (!stop_signal_);
 
     cout << "Done." << endl;
   }
@@ -168,13 +181,10 @@ class Map {
     std::ofstream file(path, std::ios::out);
     int x = end_point_.x;
     int y = end_point_.y;
-    file << dif_.dif << "_" << count << ":\n";
     for (int i = 0; i < dif_.height; ++i) {
       for (int j = 0; j < dif_.width; ++j) {
-        file << (used_[i][j] ? i == x && j == y ? 8 : 1 : 0);
-        if (j < dif_.width - 1) file << ',';
+        file << (used_[i][j] ? i == x && j == y ? 2 : 1 : 0);
       }
-      file << '\n';
     }
     file.close();
     if (count > number_) {
